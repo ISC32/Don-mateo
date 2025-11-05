@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Pedidos - Pizzería Don Mateo</title>
+    <meta name="description" content="Seguimiento de tus pedidos en Pizzería Don Mateo. Verifica el estado de tus compras.">
+    <meta name="theme-color" content="#DC2626">
+    
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'display': ['Playfair Display', 'serif'],
+                        'body': ['Inter', 'sans-serif']
+                    },
+                    colors: {
+                        'tomato': '#DC2626',
+                        'basil': '#16A34A',
+                        'cream': '#FEF7ED',
+                        'gold': '#F59E0B'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        .order-card {
+            transition: all 0.3s ease;
+        }
+        
+        .order-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-badge {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .status-badge::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+        
+        .order-details {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .order-details.expanded {
+            max-height: 500px;
+        }
+    </style>
+</head>
+<body class="font-body bg-cream text-gray-800">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" class="text-2xl font-display font-bold text-tomato">🍕 Don Mateo</a>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <a href="index.html" class="text-gray-700 hover:text-tomato transition-colors font-medium">
+                        ← Volver al Menú
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <section class="bg-gradient-to-r from-tomato to-basil text-white py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="font-display text-4xl md:text-5xl font-bold mb-4">Mis Pedidos</h1>
+            <p class="text-xl opacity-90">Seguí el estado de tus compras</p>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Filter Tabs -->
+        <div class="flex flex-wrap gap-2 mb-8">
+            <button class="filter-tab active" data-filter="todos">
+                Todos
+            </button>
+            <button class="filter-tab" data-filter="en-preparacion">
+                En Preparación
+            </button>
+            <button class="filter-tab" data-filter="en-camino">
+                En Camino
+            </button>
+            <button class="filter-tab" data-filter="entregado">
+                Entregados
+            </button>
+        </div>
+        
+        <!-- Orders List -->
+        <div id="orders-container" class="space-y-6">
+            <!-- Orders will be loaded here -->
+        </div>
+        
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden text-center py-16">
+            <div class="text-6xl mb-4">📦</div>
+            <h3 class="font-display text-2xl font-bold mb-2">No tienes pedidos aún</h3>
+            <p class="text-gray-600 mb-6">¡Hace tu primer pedido y disfrutá de nuestras pizzas!</p>
+            <a href="index.html" class="bg-tomato text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors">
+                Ver Menú
+            </a>
+        </div>
+    </div>
+
+    <!-- Order Status Modal -->
+    <div id="order-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="font-display text-2xl font-bold">Detalles del Pedido</h2>
+                    <button onclick="closeOrderModal()" class="p-2 hover:bg-gray-100 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div id="modal-content">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class OrdersManager {
+            constructor() {
+                this.orders = JSON.parse(localStorage.getItem('pizzeria-orders')) || this.generateSampleOrders();
+                this.filteredOrders = [...this.orders];
+                this.init();
+            }
+            
+            init() {
+                this.setupFilterTabs();
+                this.renderOrders();
+                this.startStatusUpdates();
+            }
+            
+            generateSampleOrders() {
+                const sampleOrders = [
+                    {
+                        number: 'PED-2024-001',
+                        items: [
+                            {
+                                id: 'pizza-margarita',
+                                name: 'Pizza Margarita',
+                                price: 2800,
+                                quantity: 1,
+                                image: 'https://kimi-web-img.moonshot.cn/img/media.istockphoto.com/2b82ef30d0a8a74b13ea8690792912ad5a7b4cff.jpg'
+                            },
+                            {
+                                id: 'empanadas-carne',
+                                name: 'Empanadas de Carne (3u)',
+                                price: 1200,
+                                quantity: 1,
+                                image: 'https://kimi-web-img.moonshot.cn/img/129780912.cdn6.editmysite.com/e8ac97e82e85a62cee019ae1d06dae1e3682b4e0.jpeg'
+                            }
+                        ],
+                        total: 4000,
+                        paymentMethod: 'mercado-pago',
+                        status: 'en-preparacion',
+                        createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+                        estimatedDelivery: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+                        deliveryAddress: 'Av. Corrientes 1234, Buenos Aires'
+                    },
+                    {
+                        number: 'PED-2024-002',
+                        items: [
+                            {
+                                id: 'pizza-pepperoni',
+                                name: 'Pizza Pepperoni',
+                                price: 3200,
+                                quantity: 2,
+                                image: 'https://kimi-web-img.moonshot.cn/img/www.foodandwine.com/98dc39b8042a88eb27f7a23c262ad52595ad07e2.jpg'
+                            }
+                        ],
+                        total: 6400,
+                        paymentMethod: 'efectivo',
+                        status: 'entregado',
+                        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                        estimatedDelivery: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 + 45 * 60 * 1000).toISOString(),
+                        deliveryAddress: 'Av. Corrientes 1234, Buenos Aires'
+                    },
+                    {
+                        number: 'PED-2024-003',
+                        items: [
+                            {
+                                id: 'combo-familiar',
+                                name: 'Combo Familiar',
+                                price: 3600,
+                                quantity: 1,
+                                image: 'https://kimi-web-img.moonshot.cn/img/cdn.pixabay.com/fb192d7b4a657c7c6b072589f612d6b78bc38d24.jpg'
+                            }
+                        ],
+                        total: 3600,
+                        paymentMethod: 'transferencia',
+                        status: 'en-camino',
+                        createdAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
+                        estimatedDelivery: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+                        deliveryAddress: 'Av. Corrientes 1234, Buenos Aires',
+                        deliveryPerson: 'Carlos',
+                        deliveryPhone: '+54 11 4567-8901'
+                    }
+                ];
+                
+                localStorage.setItem('pizzeria-orders', JSON.stringify(sampleOrders));
+                return sampleOrders;
+            }
+            
+            setupFilterTabs() {
+                const filterTabs = document.querySelectorAll('.filter-tab');
+                
+                filterTabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        // Update active tab
+                        filterTabs.forEach(t => {
+                            t.classList.remove('active');
+                            t.style.backgroundColor = '';
+                            t.style.color = '';
+                        });
+                        
+                        tab.classList.add('active');
+                        tab.style.backgroundColor = '#DC2626';
+                        tab.style.color = 'white';
+                        
+                        // Filter orders
+                        const filter = tab.dataset.filter;
+                        this.filterOrders(filter);
+                    });
+                });
+                
+                // Add styles
+                const style = document.createElement('style');
+                style.textContent = `
+                    .filter-tab {
+                        padding: 0.5rem 1rem;
+                        border-radius: 0.5rem;
+                        font-weight: 500;
+                        transition: all 0.3s ease;
+                        border: 2px solid transparent;
+                    }
+                    .filter-tab:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            filterOrders(filter) {
+                if (filter === 'todos') {
+                    this.filteredOrders = [...this.orders];
+                } else {
+                    this.filteredOrders = this.orders.filter(order => order.status === filter);
+                }
+                
+                this.renderOrders();
+            }
+            
+            renderOrders() {
+                const container = document.getElementById('orders-container');
+                const emptyState = document.getElementById('empty-state');
+                
+                if (this.filteredOrders.length === 0) {
+                    container.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+                
+                container.classList.remove('hidden');
+                emptyState.classList.add('hidden');
+                
+                container.innerHTML = this.filteredOrders.map(order => this.createOrderCard(order)).join('');
+                
+                // Animate order cards
+                anime({
+                    targets: '.order-card',
+                    opacity: [0, 1],
+                    translateY: [30, 0],
+                    delay: anime.stagger(100),
+                    duration: 600,
+                    easing: 'easeOutQuart'
+                });
+            }
+            
+            createOrderCard(order) {
+                const statusInfo = this.getStatusInfo(order.status);
+                const createdDate = new Date(order.createdAt).toLocaleDateString('es-AR');
+                const createdTime = new Date(order.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+                
+                return `
+                    <div class="order-card bg-white rounded-2xl shadow-lg p-6 opacity-0">
+                        <div class="flex items-start justify-between mb-4">
+                            <div>
+                                <h3 class="font-display text-xl font-bold">${order.number}</h3>
+                                <p class="text-gray-600 text-sm">${createdDate} a las ${createdTime}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="status-badge inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusInfo.bgColor} ${statusInfo.textColor}">
+                                    ${statusInfo.icon} ${statusInfo.label}
+                                </div>
+                                <div class="font-bold text-lg mt-2">$${order.total.toLocaleString()}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="flex items-center space-x-4 mb-2">
+                                <span class="text-sm text-gray-600">Método de pago:</span>
+                                <span class="text-sm font-medium">${this.getPaymentMethodLabel(order.paymentMethod)}</span>
+                            </div>
+                            
+                            ${order.status !== 'entregado' ? `
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-sm font-medium">Tiempo estimado:</span>
+                                        <span class="text-sm">${this.getEstimatedDeliveryTime(order.estimatedDelivery)}</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="progress-bar bg-basil h-2 rounded-full" style="width: ${this.getProgressWidth(order.status)}%"></div>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm text-gray-600">${order.items.length} item${order.items.length > 1 ? 's' : ''}</span>
+                            </div>
+                            <button onclick="ordersManager.showOrderDetails('${order.number}')" 
+                                    class="bg-tomato text-white px-4 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors">
+                                Ver Detalles
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            getStatusInfo(status) {
+                const statusMap = {
+                    'confirmado': {
+                        label: 'Confirmado',
+                        icon: '✓',
+                        bgColor: 'bg-blue-100',
+                        textColor: 'text-blue-800'
+                    },
+                    'en-preparacion': {
+                        label: 'En Preparación',
+                        icon: '👨‍🍳',
+                        bgColor: 'bg-yellow-100',
+                        textColor: 'text-yellow-800'
+                    },
+                    'en-camino': {
+                        label: 'En Camino',
+                        icon: '🚚',
+                        bgColor: 'bg-purple-100',
+                        textColor: 'text-purple-800'
+                    },
+                    'entregado': {
+                        label: 'Entregado',
+                        icon: '✅',
+                        bgColor: 'bg-green-100',
+                        textColor: 'text-green-800'
+                    }
+                };
+                
+                return statusMap[status] || statusMap['confirmado'];
+            }
+            
+            getPaymentMethodLabel(method) {
+                const methodMap = {
+                    'mercado-pago': 'Mercado Pago',
+                    'transferencia': 'Transferencia Bancaria',
+                    'efectivo': 'Efectivo'
+                };
+                
+                return methodMap[method] || method;
+            }
+            
+            getEstimatedDeliveryTime(estimatedDelivery) {
+                const now = new Date();
+                const delivery = new Date(estimatedDelivery);
+                const diffMinutes = Math.ceil((delivery - now) / (1000 * 60));
+                
+                if (diffMinutes <= 0) {
+                    return 'Llegando...';
+                } else if (diffMinutes <= 5) {
+                    return `${diffMinutes} min`;
+                } else {
+                    return `${Math.ceil(diffMinutes / 5) * 5} min`;
+                }
+            }
+            
+            getProgressWidth(status) {
+                const progressMap = {
+                    'confirmado': 25,
+                    'en-preparacion': 50,
+                    'en-camino': 75,
+                    'entregado': 100
+                };
+                
+                return progressMap[status] || 0;
+            }
+            
+            showOrderDetails(orderNumber) {
+                const order = this.orders.find(o => o.number === orderNumber);
+                if (!order) return;
+                
+                const modal = document.getElementById('order-modal');
+                const modalContent = document.getElementById('modal-content');
+                
+                const statusInfo = this.getStatusInfo(order.status);
+                const createdDate = new Date(order.createdAt).toLocaleDateString('es-AR');
+                const createdTime = new Date(order.createdAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+                
+                modalContent.innerHTML = `
+                    <div class="space-y-6">
+                        <!-- Order Header -->
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                            <div>
+                                <h3 class="font-bold text-lg">${order.number}</h3>
+                                <p class="text-gray-600">${createdDate} a las ${createdTime}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="status-badge inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusInfo.bgColor} ${statusInfo.textColor}">
+                                    ${statusInfo.icon} ${statusInfo.label}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Order Items -->
+                        <div>
+                            <h4 class="font-bold text-lg mb-4">Productos</h4>
+                            <div class="space-y-3">
+                                ${order.items.map(item => `
+                                    <div class="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                                        <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg">
+                                        <div class="flex-1">
+                                            <h5 class="font-medium">${item.name}</h5>
+                                            <p class="text-gray-600 text-sm">Cantidad: ${item.quantity}</p>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="font-bold">$${(item.price * item.quantity).toLocaleString()}</div>
+                                            <div class="text-sm text-gray-600">$${item.price.toLocaleString()} c/u</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        
+                        <!-- Order Summary -->
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <h4 class="font-bold text-lg mb-4">Resumen</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between">
+                                    <span>Subtotal:</span>
+                                    <span>$${order.total.toLocaleString()}</span>
+                                </div>
+                                <div class="flex justify-between text-green-600">
+                                    <span>Envío:</span>
+                                    <span>Gratis</span>
+                                </div>
+                                <div class="flex justify-between text-lg font-bold border-t pt-2">
+                                    <span>Total:</span>
+                                    <span class="text-tomato">$${order.total.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Payment & Delivery Info -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-bold mb-2">Método de Pago</h4>
+                                <p class="text-gray-600">${this.getPaymentMethodLabel(order.paymentMethod)}</p>
+                            </div>
+                            
+                            <div class="bg-gray-50 rounded-lg p-4">
+                                <h4 class="font-bold mb-2">Dirección de Entrega</h4>
+                                <p class="text-gray-600">${order.deliveryAddress}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Delivery Info (if applicable) -->
+                        ${order.status === 'en-camino' && order.deliveryPerson ? `
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <h4 class="font-bold mb-2 text-blue-900">Información de Entrega</h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <span class="text-blue-700">Repartidor:</span>
+                                        <span class="font-medium">${order.deliveryPerson}</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-blue-700">Teléfono:</span>
+                                        <span class="font-medium">${order.deliveryPhone}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        
+                        <!-- Reorder Button -->
+                        <div class="flex gap-4">
+                            <button onclick="ordersManager.reorder('${order.number}')" 
+                                    class="flex-1 bg-tomato text-white py-3 px-4 rounded-lg font-medium hover:bg-red-700 transition-colors">
+                                Reordenar
+                            </button>
+                            <button onclick="closeOrderModal()" 
+                                    class="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-200 transition-colors">
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                modal.classList.remove('hidden');
+                
+                // Animate modal
+                anime({
+                    targets: modal,
+                    opacity: [0, 1],
+                    duration: 300,
+                    easing: 'easeOutQuart'
+                });
+                
+                anime({
+                    targets: modal.querySelector('.bg-white'),
+                    scale: [0.8, 1],
+                    opacity: [0, 1],
+                    duration: 400,
+                    delay: 100,
+                    easing: 'easeOutBack'
+                });
+            }
+            
+            reorder(orderNumber) {
+                const order = this.orders.find(o => o.number === orderNumber);
+                if (!order) return;
+                
+                // Add items to cart
+                const cart = JSON.parse(localStorage.getItem('pizzeria-cart')) || [];
+                
+                order.items.forEach(item => {
+                    const existingItem = cart.find(cartItem => cartItem.id === item.id);
+                    if (existingItem) {
+                        existingItem.quantity += item.quantity;
+                    } else {
+                        cart.push({
+                            ...item,
+                            addedAt: new Date().toISOString()
+                        });
+                    }
+                });
+                
+                localStorage.setItem('pizzeria-cart', JSON.stringify(cart));
+                
+                // Close modal and redirect to index
+                closeOrderModal();
+                window.location.href = 'index.html';
+            }
+            
+            startStatusUpdates() {
+                // Simulate real-time status updates
+                setInterval(() => {
+                    this.updateOrderStatuses();
+                }, 60000); // Update every minute
+            }
+            
+            updateOrderStatuses() {
+                let hasUpdates = false;
+                
+                this.orders.forEach(order => {
+                    if (order.status === 'confirmado') {
+                        const timeSinceCreated = Date.now() - new Date(order.createdAt).getTime();
+                        const minutesSinceCreated = timeSinceCreated / (1000 * 60);
+                        
+                        if (minutesSinceCreated > 5) {
+                            order.status = 'en-preparacion';
+                            hasUpdates = true;
+                        }
+                    } else if (order.status === 'en-preparacion') {
+                        const timeSinceCreated = Date.now() - new Date(order.createdAt).getTime();
+                        const minutesSinceCreated = timeSinceCreated / (1000 * 60);
+                        
+                        if (minutesSinceCreated > 20) {
+                            order.status = 'en-camino';
+                            order.deliveryPerson = 'Carlos';
+                            order.deliveryPhone = '+54 11 4567-8901';
+                            hasUpdates = true;
+                        }
+                    } else if (order.status === 'en-camino') {
+                        const timeSinceCreated = Date.now() - new Date(order.createdAt).getTime();
+                        const minutesSinceCreated = timeSinceCreated / (1000 * 60);
+                        
+                        if (minutesSinceCreated > 35) {
+                            order.status = 'entregado';
+                            hasUpdates = true;
+                        }
+                    }
+                });
+                
+                if (hasUpdates) {
+                    localStorage.setItem('pizzeria-orders', JSON.stringify(this.orders));
+                    this.filterOrders(document.querySelector('.filter-tab.active').dataset.filter);
+                }
+            }
+        }
+        
+        function closeOrderModal() {
+            const modal = document.getElementById('order-modal');
+            modal.classList.add('hidden');
+        }
+        
+        // Initialize orders manager
+        let ordersManager;
+        document.addEventListener('DOMContentLoaded', () => {
+            ordersManager = new OrdersManager();
+        });
+    </script>
+</body>
+</html>

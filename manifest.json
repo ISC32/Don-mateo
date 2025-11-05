@@ -1,0 +1,152 @@
+{
+  "name": "Pizzería Don Mateo",
+  "short_name": "Don Mateo",
+  "description": "Las mejores pizzas artesanales de Buenos Aires. Delivery rápido y pago seguro.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FEF7ED",
+  "theme_color": "#DC2626",
+  "orientation": "portrait-primary",
+  "categories": ["food", "lifestyle", "business"],
+  "lang": "es-AR",
+  "dir": "ltr",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "resources/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "resources/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "resources/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "resources/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "resources/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "resources/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "resources/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "resources/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "resources/screenshot-mobile-1.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Catálogo de productos"
+    },
+    {
+      "src": "resources/screenshot-mobile-2.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Carrito de compras"
+    },
+    {
+      "src": "resources/screenshot-desktop-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Página principal"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Ver Menú",
+      "short_name": "Menú",
+      "description": "Explorar nuestro catálogo de pizzas y productos",
+      "url": "/",
+      "icons": [
+        {
+          "src": "resources/shortcut-menu.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Mis Pedidos",
+      "short_name": "Pedidos",
+      "description": "Ver el estado de tus pedidos anteriores",
+      "url": "/pedidos.html",
+      "icons": [
+        {
+          "src": "resources/shortcut-orders.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Carrito de Compras",
+      "short_name": "Carrito",
+      "description": "Revisar tu carrito de compras",
+      "url": "/checkout.html",
+      "icons": [
+        {
+          "src": "resources/shortcut-cart.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "handle_links": "preferred",
+  "protocol_handlers": [
+    {
+      "protocol": "web+donmateo",
+      "url": "/?order=%s"
+    }
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}
